@@ -1,0 +1,11 @@
+/** required by edge to see the images **/
+img[data-src],
+img[data-srcset]{
+    display: block !important;
+    min-height: 1px !important;
+}
+
+/* Prevents img without src to appear */
+img:not([src]) {
+    visibility: hidden !important;
+}

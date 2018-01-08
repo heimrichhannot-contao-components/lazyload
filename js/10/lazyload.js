@@ -18,7 +18,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         class_error: "error",
         callback_load: null,
         callback_error: null,
-        callback_set: null
+        callback_set: null,
+        callback_enter: null
     };
 
     var dataPrefix = "data-";
@@ -53,7 +54,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         window.dispatchEvent(event);
     };
 
-    /* Auto initialization of one or more instances of lazyload, depending on the 
+    /* Auto initialization of one or more instances of lazyload, depending on the
         options passed in (plain object or an array) */
     var autoInitialize = function autoInitialize(classObj, options) {
         if (!options.length) {
@@ -165,6 +166,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     };
 
     var revealElement = function revealElement(element, settings) {
+        callCallback(settings.callback_enter, element);
         if (["IMG", "IFRAME"].indexOf(element.tagName) > -1) {
             addOneShotListeners(element, settings);
             addClass(element, settings.class_loading);

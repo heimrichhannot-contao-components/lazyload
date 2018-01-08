@@ -1,5 +1,5 @@
 {
-  "name": "heimrichhannot/contao-compontent-lazyload",
+  "name": "heimrichhannot-contao-components/lazyload",
   "type": "contao-component",
   "description": "Lazyload integration for Contao Open Source CMS",
   "license": "MIT",
