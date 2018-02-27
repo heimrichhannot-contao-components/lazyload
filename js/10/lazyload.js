@@ -54,7 +54,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         window.dispatchEvent(event);
     };
 
-    /* Auto initialization of one or more instances of lazyload, depending on the
+    /* Auto initialization of one or more instances of lazyload, depending on the 
         options passed in (plain object or an array) */
     var autoInitialize = function autoInitialize(classObj, options) {
         if (!options.length) {
@@ -193,7 +193,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
             var settings = this._settings;
             var onIntersection = function onIntersection(entries) {
                 entries.forEach(function (entry) {
-                    if (entry.intersectionRatio > 0) {
+                    // entry.isIntersecting is null on some versions of MS Edge
+                    // entry.intersectionRatio can be 0 on some intersecting elements
+                    if (entry.isIntersecting || entry.intersectionRatio > 0) {
                         var element = entry.target;
                         revealElement(element, settings);
                         _this._observer.unobserve(element);
