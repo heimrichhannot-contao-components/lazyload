@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 2018-03-27
+
+### Added
+- `image-wrapper` and `image` styles to occupy vertical space and maintain ratio (see: https://github.com/verlok/lazyload#tips--tricks)
+
 ## [1.0.2] - 2018-01-27
 
 ### Changed
