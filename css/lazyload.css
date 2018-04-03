@@ -16,8 +16,3 @@ img:not([src]) {
     padding-bottom: 66.67%; /* You define this doing height / width * 100% */
     position: relative;
 }
-.image {
-    width: 100%;
-    /*height: auto;*/
-    position: absolute;
-}
