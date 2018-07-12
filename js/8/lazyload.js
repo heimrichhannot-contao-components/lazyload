@@ -7,23 +7,26 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 })(this, function () {
     'use strict';
 
-    var defaultSettings = {
-        elements_selector: "img",
-        container: window,
-        threshold: 300,
-        throttle: 150,
-        data_src: "src",
-        data_srcset: "srcset",
-        class_loading: "loading",
-        class_loaded: "loaded",
-        class_error: "error",
-        class_initial: "initial",
-        skip_invisible: true,
-        callback_load: null,
-        callback_error: null,
-        callback_set: null,
-        callback_processed: null,
-        callback_enter: null
+    var getDefaultSettings = function getDefaultSettings() {
+        return {
+            elements_selector: "img",
+            container: window,
+            threshold: 300,
+            throttle: 150,
+            data_src: "src",
+            data_srcset: "srcset",
+            data_sizes: "sizes",
+            class_loading: "loading",
+            class_loaded: "loaded",
+            class_error: "error",
+            class_initial: "initial",
+            skip_invisible: true,
+            callback_load: null,
+            callback_error: null,
+            callback_set: null,
+            callback_processed: null,
+            callback_enter: null
+        };
     };
 
     var isBot = !("onscroll" in window) || /glebot/.test(navigator.userAgent);
@@ -63,9 +66,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         return fold >= getLeftOffset(element) + threshold + element.offsetWidth;
     };
 
-    var isInsideViewport = function isInsideViewport(element, container, threshold) {
+    function isInsideViewport(element, container, threshold) {
         return !isBelowViewport(element, container, threshold) && !isAboveViewport(element, container, threshold) && !isAtRightOfViewport(element, container, threshold) && !isAtLeftOfViewport(element, container, threshold);
-    };
+    }
 
     /* Creates instance and notifies it through the window element */
     var createInstance = function createInstance(classObj, options) {
@@ -85,7 +88,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     /* Auto initialization of one or more instances of lazyload, depending on the 
         options passed in (plain object or an array) */
-    var autoInitialize = function autoInitialize(classObj, options) {
+    function autoInitialize(classObj, options) {
         var optsLength = options.length;
         if (!optsLength) {
             // Plain object
@@ -96,7 +99,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                 createInstance(classObj, options[i]);
             }
         }
-    };
+    }
 
     var dataPrefix = "data-";
 
@@ -108,48 +111,60 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         return element.setAttribute(dataPrefix + attribute, value);
     };
 
-    var setSourcesForPicture = function setSourcesForPicture(element, srcsetDataAttribute) {
-        var parent = element.parentNode;
-        if (parent.tagName !== "PICTURE") {
-            return;
-        }
-        for (var i = 0; i < parent.children.length; i++) {
-            var pictureChild = parent.children[i];
-            if (pictureChild.tagName === "SOURCE") {
-                var sourceSrcset = getData(pictureChild, srcsetDataAttribute);
-                if (sourceSrcset) {
-                    pictureChild.setAttribute("srcset", sourceSrcset);
+    var setSourcesInChildren = function setSourcesInChildren(parentTag, attrName, dataAttrName) {
+        for (var i = 0, childTag; childTag = parentTag.children[i]; i += 1) {
+            if (childTag.tagName === "SOURCE") {
+                var attributeValue = getData(childTag, dataAttrName);
+                if (attributeValue) {
+                    childTag.setAttribute(attrName, attributeValue);
                 }
             }
         }
     };
 
-    var setSources = function setSources(element, srcsetDataAttribute, srcDataAttribute) {
+    var setAttributeIfNotNullOrEmpty = function setAttributeIfNotNullOrEmpty(element, attrName, value) {
+        if (!value) {
+            return;
+        }
+        element.setAttribute(attrName, value);
+    };
+
+    function setSources(element, settings) {
+        var sizesDataName = settings.data_sizes,
+            srcsetDataName = settings.data_srcset,
+            srcDataName = settings.data_src;
+
+        var srcDataValue = getData(element, srcDataName);
         var tagName = element.tagName;
-        var elementSrc = getData(element, srcDataAttribute);
         if (tagName === "IMG") {
-            setSourcesForPicture(element, srcsetDataAttribute);
-            var imgSrcset = getData(element, srcsetDataAttribute);
-            if (imgSrcset) {
-                element.setAttribute("srcset", imgSrcset);
+            var parent = element.parentNode;
+            if (parent && parent.tagName === "PICTURE") {
+                setSourcesInChildren(parent, "srcset", srcsetDataName);
             }
-            if (elementSrc) {
-                element.setAttribute("src", elementSrc);
-            }
+            var sizesDataValue = getData(element, sizesDataName);
+            setAttributeIfNotNullOrEmpty(element, "sizes", sizesDataValue);
+            var srcsetDataValue = getData(element, srcsetDataName);
+            setAttributeIfNotNullOrEmpty(element, "srcset", srcsetDataValue);
+            setAttributeIfNotNullOrEmpty(element, "src", srcDataValue);
             return;
         }
         if (tagName === "IFRAME") {
-            if (elementSrc) {
-                element.setAttribute("src", elementSrc);
-            }
+            setAttributeIfNotNullOrEmpty(element, "src", srcDataValue);
             return;
         }
-        if (elementSrc) {
-            element.style.backgroundImage = 'url("' + elementSrc + '")';
+        if (tagName === "VIDEO") {
+            setSourcesInChildren(element, "src", srcDataName);
+            setAttributeIfNotNullOrEmpty(element, "src", srcDataValue);
+            return;
         }
-    };
+        if (srcDataValue) {
+            element.style.backgroundImage = 'url("' + srcDataValue + '")';
+        }
+    }
 
-    var supportsClassList = "classList" in document.createElement("p");
+    var runningOnBrowser = typeof window !== "undefined";
+
+    var supportsClassList = runningOnBrowser && "classList" in document.createElement("p");
 
     var addClass = function addClass(element, className) {
         if (supportsClassList) {
@@ -172,7 +187,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
      */
 
     var LazyLoad = function LazyLoad(instanceSettings) {
-        this._settings = _extends({}, defaultSettings, instanceSettings);
+        this._settings = _extends({}, getDefaultSettings(), instanceSettings);
         this._queryOriginNode = this._settings.container === window ? document : this._settings.container;
 
         this._previousLoopTime = 0;
@@ -218,16 +233,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
             };
 
             callCallback(settings.callback_enter, element);
-            if (element.tagName === "IMG" || element.tagName === "IFRAME") {
+            if (["IMG", "IFRAME", "VIDEO"].indexOf(element.tagName) > -1) {
                 element.addEventListener("load", loadCallback);
                 element.addEventListener("error", errorCallback);
                 addClass(element, settings.class_loading);
             }
-            setSources(element, settings.data_srcset, settings.data_src);
+            setSources(element, settings);
             callCallback(settings.callback_set, element);
         },
 
-        _loopThroughElements: function _loopThroughElements() {
+        _loopThroughElements: function _loopThroughElements(forceDownload) {
             var settings = this._settings,
                 elements = this._elements,
                 elementsLength = !elements ? 0 : elements.length;
@@ -242,7 +257,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                     continue;
                 }
 
-                if (isBot || isInsideViewport(element, settings.container, settings.threshold)) {
+                if (isBot || forceDownload || isInsideViewport(element, settings.container, settings.threshold)) {
                     if (firstLoop) {
                         addClass(element, settings.class_initial);
                     }
@@ -330,6 +345,10 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
             }
         },
 
+        loadAll: function loadAll() {
+            this._loopThroughElements(true);
+        },
+
         update: function update() {
             // Converts to array the nodeset obtained querying the DOM from _queryOriginNode with elements_selector
             this._elements = Array.prototype.slice.call(this._queryOriginNode.querySelectorAll(this._settings.elements_selector));
@@ -353,7 +372,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     /* Automatic instances creation if required (useful for async script loading!) */
     var autoInitOptions = window.lazyLoadOptions;
-    if (autoInitOptions) {
+    if (runningOnBrowser && autoInitOptions) {
         autoInitialize(LazyLoad, autoInitOptions);
     }
 

@@ -7,19 +7,24 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 })(this, function () {
     'use strict';
 
-    var defaultSettings = {
-        elements_selector: "img",
-        container: document,
-        threshold: 300,
-        data_src: "src",
-        data_srcset: "srcset",
-        class_loading: "loading",
-        class_loaded: "loaded",
-        class_error: "error",
-        callback_load: null,
-        callback_error: null,
-        callback_set: null,
-        callback_enter: null
+    var getInstanceSettings = function getInstanceSettings(customSettings) {
+        var defaultSettings = {
+            elements_selector: "img",
+            container: document,
+            threshold: 300,
+            data_src: "src",
+            data_srcset: "srcset",
+            data_sizes: "sizes",
+            class_loading: "loading",
+            class_loaded: "loaded",
+            class_error: "error",
+            callback_load: null,
+            callback_error: null,
+            callback_set: null,
+            callback_enter: null
+        };
+
+        return _extends({}, defaultSettings, customSettings);
     };
 
     var dataPrefix = "data-";
@@ -32,11 +37,11 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         return element.setAttribute(dataPrefix + attribute, value);
     };
 
-    var purgeElements = function purgeElements(elements) {
+    function purgeElements(elements) {
         return elements.filter(function (element) {
             return !getData(element, "was-processed");
         });
-    };
+    }
 
     /* Creates instance and notifies it through the window element */
     var createInstance = function createInstance(classObj, options) {
@@ -56,7 +61,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     /* Auto initialization of one or more instances of lazyload, depending on the 
         options passed in (plain object or an array) */
-    var autoInitialize = function autoInitialize(classObj, options) {
+    function autoInitialize(classObj, options) {
         if (!options.length) {
             // Plain object
             createInstance(classObj, options);
@@ -66,54 +71,64 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                 createInstance(classObj, optionsItem);
             }
         }
-    };
+    }
 
-    var setSourcesForPicture = function setSourcesForPicture(element, settings) {
-        var dataSrcSet = settings.data_srcset;
-
-        var parent = element.parentNode;
-        if (parent.tagName !== "PICTURE") {
-            return;
-        }
-        for (var i = 0, pictureChild; pictureChild = parent.children[i]; i += 1) {
-            if (pictureChild.tagName === "SOURCE") {
-                var sourceSrcset = getData(pictureChild, dataSrcSet);
-                if (sourceSrcset) {
-                    pictureChild.setAttribute("srcset", sourceSrcset);
+    var setSourcesInChildren = function setSourcesInChildren(parentTag, attrName, dataAttrName) {
+        for (var i = 0, childTag; childTag = parentTag.children[i]; i += 1) {
+            if (childTag.tagName === "SOURCE") {
+                var attributeValue = getData(childTag, dataAttrName);
+                if (attributeValue) {
+                    childTag.setAttribute(attrName, attributeValue);
                 }
             }
         }
     };
 
-    var setSources = function setSources(element, settings) {
-        var dataSrc = settings.data_src,
-            dataSrcSet = settings.data_srcset;
+    var setAttributeIfNotNullOrEmpty = function setAttributeIfNotNullOrEmpty(element, attrName, value) {
+        if (!value) {
+            return;
+        }
+        element.setAttribute(attrName, value);
+    };
 
+    var setSources = function setSources(element, settings) {
+        var sizesDataName = settings.data_sizes,
+            srcsetDataName = settings.data_srcset,
+            srcDataName = settings.data_src;
+
+        var srcDataValue = getData(element, srcDataName);
         var tagName = element.tagName;
-        var elementSrc = getData(element, dataSrc);
         if (tagName === "IMG") {
-            setSourcesForPicture(element, settings);
-            var imgSrcset = getData(element, dataSrcSet);
-            if (imgSrcset) {
-                element.setAttribute("srcset", imgSrcset);
+            var parent = element.parentNode;
+            if (parent && parent.tagName === "PICTURE") {
+                setSourcesInChildren(parent, "srcset", srcsetDataName);
             }
-            if (elementSrc) {
-                element.setAttribute("src", elementSrc);
-            }
+            var sizesDataValue = getData(element, sizesDataName);
+            setAttributeIfNotNullOrEmpty(element, "sizes", sizesDataValue);
+            var srcsetDataValue = getData(element, srcsetDataName);
+            setAttributeIfNotNullOrEmpty(element, "srcset", srcsetDataValue);
+            setAttributeIfNotNullOrEmpty(element, "src", srcDataValue);
             return;
         }
         if (tagName === "IFRAME") {
-            if (elementSrc) {
-                element.setAttribute("src", elementSrc);
-            }
+            setAttributeIfNotNullOrEmpty(element, "src", srcDataValue);
             return;
         }
-        if (elementSrc) {
-            element.style.backgroundImage = 'url("' + elementSrc + '")';
+        if (tagName === "VIDEO") {
+            setSourcesInChildren(element, "src", srcDataName);
+            setAttributeIfNotNullOrEmpty(element, "src", srcDataValue);
+            return;
+        }
+        if (srcDataValue) {
+            element.style.backgroundImage = 'url("' + srcDataValue + '")';
         }
     };
 
-    var supportsClassList = "classList" in document.createElement("p");
+    var runningOnBrowser = typeof window !== "undefined";
+
+    var supportsIntersectionObserver = runningOnBrowser && "IntersectionObserver" in window;
+
+    var supportsClassList = runningOnBrowser && "classList" in document.createElement("p");
 
     var addClass = function addClass(element, className) {
         if (supportsClassList) {
@@ -165,19 +180,25 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         callCallback(success ? settings.callback_load : settings.callback_error, element); // Calling loaded or error callback
     };
 
-    var revealElement = function revealElement(element, settings) {
+    function revealElement(element, settings) {
         callCallback(settings.callback_enter, element);
-        if (["IMG", "IFRAME"].indexOf(element.tagName) > -1) {
+        if (["IMG", "IFRAME", "VIDEO"].indexOf(element.tagName) > -1) {
             addOneShotListeners(element, settings);
             addClass(element, settings.class_loading);
         }
         setSources(element, settings);
         setData(element, "was-processed", true);
         callCallback(settings.callback_set, element);
+    }
+
+    /* entry.isIntersecting needs fallback because is null on some versions of MS Edge, and
+       entry.intersectionRatio is not enough alone because it could be 0 on some intersecting elements */
+    var isIntersecting = function isIntersecting(element) {
+        return element.isIntersecting || element.intersectionRatio > 0;
     };
 
-    var LazyLoad = function LazyLoad(instanceSettings, elements) {
-        this._settings = _extends({}, defaultSettings, instanceSettings);
+    var LazyLoad = function LazyLoad(customSettings, elements) {
+        this._settings = getInstanceSettings(customSettings);
         this._setObserver();
         this.update(elements);
     };
@@ -186,27 +207,35 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         _setObserver: function _setObserver() {
             var _this = this;
 
-            if (!("IntersectionObserver" in window)) {
+            if (!supportsIntersectionObserver) {
                 return;
             }
 
             var settings = this._settings;
-            var onIntersection = function onIntersection(entries) {
+            var observerSettings = {
+                root: settings.container === document ? null : settings.container,
+                rootMargin: settings.threshold + "px"
+            };
+            var revealIntersectingElements = function revealIntersectingElements(entries) {
                 entries.forEach(function (entry) {
-                    // entry.isIntersecting is null on some versions of MS Edge
-                    // entry.intersectionRatio can be 0 on some intersecting elements
-                    if (entry.isIntersecting || entry.intersectionRatio > 0) {
+                    if (isIntersecting(entry)) {
                         var element = entry.target;
-                        revealElement(element, settings);
+                        revealElement(element, _this._settings);
                         _this._observer.unobserve(element);
                     }
                 });
                 _this._elements = purgeElements(_this._elements);
             };
-            this._observer = new IntersectionObserver(onIntersection, {
-                root: settings.container === document ? null : settings.container,
-                rootMargin: settings.threshold + "px"
+            this._observer = new IntersectionObserver(revealIntersectingElements, observerSettings);
+        },
+
+        loadAll: function loadAll() {
+            var settings = this._settings;
+            // Fallback: load all elements at once
+            this._elements.forEach(function (element) {
+                revealElement(element, settings);
             });
+            this._elements = purgeElements(this._elements);
         },
 
         update: function update(elements) {
@@ -222,11 +251,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
                 });
                 return;
             }
-            // Fallback: load all elements at once
-            this._elements.forEach(function (element) {
-                revealElement(element, settings);
-            });
-            this._elements = purgeElements(this._elements);
+            this.loadAll();
         },
 
         destroy: function destroy() {
@@ -245,7 +270,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     /* Automatic instances creation if required (useful for async script loading!) */
     var autoInitOptions = window.lazyLoadOptions;
-    if (autoInitOptions) {
+    if (runningOnBrowser && autoInitOptions) {
         autoInitialize(LazyLoad, autoInitOptions);
     }
 
