@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2018-11-28
+
+##### Updated
+- library version 10 to 10.19.0
+- library version 8 to 8.10.0
+- documentation
+
 ## [1.1.0] - 2018-07-11
 
 ##### Updated
