@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2019-01-18
+
+##### Changed
+- apply style only on non-loaded images
+
 ## [1.2.0] - 2018-11-28
 
 ##### Updated
