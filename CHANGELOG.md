@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2019-01-24
+
+##### Changed
+- do not use `padding-bottom` to aspect ratio of images before loaded, see `heimrichhannot/contao-speed-bundle` version `1.5.0` + for more information
+
 ## [1.2.1] - 2019-01-18
 
 ##### Changed
@@ -39,3 +44,4 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - minified css file
+
